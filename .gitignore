@@ -1,0 +1,69 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE / Editor
+.vscode/
+.claude/
+
+# Internal planning / session notes
+PLAN.md
+
+# Checkpoints and models (Heavy files)
+checkpoints/
+*.pth
+*.pt
+*.onnx
+
+# External repositories / Dependencies
+Depth-Anything-V2/
+
+# Data and Outputs
+data/
+outputs/
+
+# Logs
+*.log
+MUJOCO_LOG.TXT
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
