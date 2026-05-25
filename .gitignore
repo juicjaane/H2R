@@ -39,8 +39,12 @@ venv.bak/
 .vscode/
 .claude/
 
-# Internal planning / session notes
+# Internal / personal files — local only, never commit
 PLAN.md
+LESSONS_FOR_CLAUDE.md
+LEARNING_ROADMAP.md
+ROBOTICS_PRIMER.md
+WHAT_I_DID_WHEN_U_WERE_INACTIVE.md
 
 # Checkpoints and models (Heavy files)
 checkpoints/
