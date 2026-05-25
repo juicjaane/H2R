@@ -4,7 +4,15 @@
 
 The output is joint-angle training data compatible with [ACT](https://arxiv.org/abs/2304.13705) and [Diffusion Policy](https://diffusion-policy.cs.columbia.edu/) as a direct substitute for teleoperated demonstrations.
 
-**Theory & design rationale** → [THEORY.md](THEORY.md) | **Learning roadmap** → [LEARNING_ROADMAP.md](LEARNING_ROADMAP.md)
+**Theory & design rationale** → [THEORY.md](THEORY.md) &nbsp;|&nbsp; **Field primer** → [ROBOTICS_PRIMER.md](ROBOTICS_PRIMER.md)
+
+---
+
+## Full Pipeline Demo
+
+![H2R full pipeline demo](media/07_composite.gif)
+
+*4-panel composite: original RGB with skeleton overlay (top-left) · metric depth (top-right) · top-down trajectory view (bottom-left) · MuJoCo simulation (bottom-right)*
 
 ---
 
@@ -12,48 +20,45 @@ The output is joint-angle training data compatible with [ACT](https://arxiv.org/
 
 ```
 Webcam video  →  Hand tracking  →  Metric depth  →  3D trajectory
-     →  Smoothing  →  IK solving  →  MuJoCo simulation  →  Training data
+     →  Smoothing  →  Robot placement  →  IK solving  →  MuJoCo simulation
 ```
 
+### Stage-by-Stage Breakdown
+
 <table>
-<tr>
-<td align="center"><b>Raw Input</b></td>
-<td align="center"><b>Hand Tracking</b></td>
-<td align="center"><b>Metric Depth</b></td>
-</tr>
-<tr>
-<td><img src="media/00_raw_frame.jpg" width="320"/></td>
-<td><img src="media/01_hand_tracking.jpg" width="320"/></td>
-<td><img src="media/02_depth_map.jpg" width="320"/></td>
-</tr>
-<tr>
-<td align="center"><b>3D Trajectory</b></td>
-<td align="center"><b>Workspace Analysis</b></td>
-<td align="center"><b>IK Success Timeline</b></td>
-</tr>
-<tr>
-<td><img src="media/03_trajectory_3d.png" width="320"/></td>
-<td><img src="media/04_workspace_heatmap.png" width="320"/></td>
-<td><img src="media/05_ik_success.png" width="320"/></td>
-</tr>
+  <tr>
+    <td align="center" width="33%">
+      <b>1 — Raw Input</b><br/>
+      <img src="media/00_raw_input.gif" width="100%"/>
+    </td>
+    <td align="center" width="33%">
+      <b>2 — Hand Tracking (MediaPipe)</b><br/>
+      <img src="media/01_hand_tracking.gif" width="100%"/>
+    </td>
+    <td align="center" width="33%">
+      <b>3 — Metric Depth (DAV2)</b><br/>
+      <img src="media/02_depth_map.gif" width="100%"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" width="33%">
+      <b>4 — 3D Trajectory (table frame)</b><br/>
+      <img src="media/03_trajectory_3d.gif" width="100%"/>
+    </td>
+    <td align="center" width="33%">
+      <b>5 — Workspace Coverage Search</b><br/>
+      <img src="media/04_workspace_heatmap.gif" width="100%"/>
+    </td>
+    <td align="center" width="33%">
+      <b>6 — IK Success Timeline</b><br/>
+      <img src="media/05_ik_success.gif" width="100%"/>
+    </td>
+  </tr>
 </table>
 
 ### Simulation Output
 
-<table>
-<tr>
-<td align="center"><b>MuJoCo Render</b></td>
-<td align="center"><b>4-Panel Composite</b></td>
-</tr>
-<tr>
-<td><img src="media/06_simulation.jpg" width="480"/></td>
-<td><img src="media/07_composite_frame.jpg" width="480"/></td>
-</tr>
-</table>
-
-### Full Pipeline Demo (GIF)
-
-![H2R demo](media/demo.gif)
+<img src="media/06_simulation.gif" width="100%"/>
 
 ---
 
@@ -65,7 +70,7 @@ Webcam video  →  Hand tracking  →  Metric depth  →  3D trajectory
 | Success threshold | 4 cm position error |
 | Remaining failures | 8.4% — genuine workspace-boundary positions |
 | Depth temporal noise | 30–130 mm std dev per fixed point |
-| Processing time (per demo) | ~2–3 min on mid-tier GPU |
+| Processing time | ~2–3 min on mid-tier GPU |
 | Output format | `joint_angles (N×7)` + `gripper (N)` — drop-in for ACT / Diffusion Policy |
 
 ---
@@ -96,7 +101,7 @@ H2R/
 ├── scripts/                     ← one script per pipeline phase
 ├── robot/
 │   └── panda.xml                ← Franka Panda MuJoCo model + table
-└── media/                       ← demo assets (this README)
+└── media/                       ← demo GIFs (this README)
 ```
 
 ---
@@ -128,8 +133,6 @@ pip install -r Depth-Anything-V2/requirements.txt
 python scripts/download_metric_checkpoint.py
 ```
 
-The checkpoint is saved to `checkpoints/depth_anything_v2_metric_hypersim_vits.pth`.
-
 ---
 
 ## Quick Start
@@ -138,7 +141,7 @@ The checkpoint is saved to `checkpoints/depth_anything_v2_metric_hypersim_vits.p
 # Calibrate the table surface and record a demo
 python pipeline.py record
 
-# Process video: extract trajectory + smooth + find robot placement
+# Extract trajectory + smooth + find robot placement
 python pipeline.py process data/take1.mp4
 
 # Solve IK + render simulation + generate composite video
@@ -151,13 +154,8 @@ python pipeline.py run data/take1.mp4
 ### Options
 
 ```bash
-# Different simulation camera angle
-python pipeline.py simulate data/take1.mp4 --camera top
-
-# Skip composite video (faster)
-python pipeline.py simulate data/take1.mp4 --skip-composite
-
-# Custom output directory
+python pipeline.py simulate data/take1.mp4 --camera top        # top-down view
+python pipeline.py simulate data/take1.mp4 --skip-composite    # faster
 python pipeline.py run data/take1.mp4 --output-dir my_outputs/
 ```
 
@@ -184,89 +182,44 @@ python pipeline.py run data/take1.mp4 --output-dir my_outputs/
 ### Standalone diagnostics
 
 ```bash
-# Render a single frame to PNG (fast smoke test)
 python scripts/render_sim.py --joints data/take1_joints.npz --smoke-test
-
-# Plot 3D trajectory
 python scripts/plot_trajectory.py --smoothed data/take1_smoothed.npz
-
-# Validate depth model accuracy
 python scripts/validate_depth.py
-
-# Re-export README demo assets
-python scripts/export_demo_assets.py
 ```
 
 ---
 
 ## How It Works
 
-### Step 1 — Table calibration
+### 1 — Table calibration
 
-The user touches each of the four corners of the recording surface with their index fingertip. For each corner, 10 frames are captured and the **median depth** from a 5×5 patch is used to reduce silhouette noise. SVD plane fitting recovers the table plane, and the four corners define a rigid transform `T_cam→table` saved to `data/calibration.json`.
+Touch each of the four corners of the recording surface with your index fingertip. Median depth from a 5×5 patch at each corner is used to avoid silhouette noise. SVD plane fitting recovers the surface frame `T_cam→table`.
 
-### Step 2 — Hand tracking + depth
+### 2 — Hand tracking + metric depth
 
-For each video frame:
-1. **MediaPipe Hands** detects 21 2D landmarks at sub-pixel accuracy
-2. **Depth Anything V2** (Hypersim indoor metric checkpoint) estimates metric depth in metres
-3. A 5×5 median patch is sampled around each landmark to avoid fingertip silhouette depth errors
-4. Pinhole back-projection lifts each landmark to a 3D point in camera frame
-5. `T_cam→table` transforms all points to table frame
+For each frame: MediaPipe detects 21 2D landmarks → Depth Anything V2 predicts per-pixel metric depth → 5×5 median patch sampled at each landmark → pinhole back-projection lifts landmarks to 3D camera-frame points → `T_cam→table` transform to table frame.
 
 ```
-X = (px - cx) * depth / fx
-Y = (py - cy) * depth / fy
+X = (px − cx) * depth / fx
+Y = (py − cy) * depth / fy
 Z = depth
 ```
 
-### Step 3 — Smoothing
+### 3 — Savitzky-Golay smoothing
 
-Depth Anything V2 processes each frame independently with no temporal memory. This produces 30–130 mm of temporal noise at a fixed point. **Savitzky-Golay filtering** (window=15 frames, polynomial order=3) is applied offline — it uses future frames, so it has zero lag, unlike EMA. Detection gaps are linearly interpolated before filtering.
+The depth model has no temporal memory — it re-estimates the full scene each frame, producing 30–130 mm of temporal noise. Savitzky-Golay (offline, zero-lag) fits a local polynomial across a 15-frame window. Detection gaps are linearly interpolated before filtering.
 
-### Step 4 — Robot placement
+### 4 — Robot placement
 
-A 40×40 grid of candidate robot base positions is evaluated over the table XY plane. Each candidate is scored as the fraction of trajectory waypoints inside the Panda's reachable annulus (inner dead zone 0.170 m, outer reach 0.855 m). The best position typically achieves >95% geometric coverage.
+40×40 grid search over the table XY plane. Each candidate base position is scored as the fraction of trajectory waypoints inside the Panda's reachable annulus (0.170 m inner dead zone, 0.855 m outer reach). Best position typically achieves >95% geometric coverage.
 
-### Step 5 — Inverse kinematics
+### 5 — Damped Least-Squares IK
 
-**Damped Least-Squares (DLS) IK:**
 ```
-Δq = Jᵀ(JJᵀ + λI)⁻¹ · e
+Δq = Jᵀ(JJᵀ + λI)⁻¹ · e       λ = 1e-4
 ```
-Where `λ = 1e-4` (damping), `J` is the 6×7 Jacobian, and `e` is the 6D task error (position + orientation).
 
-Three design decisions are critical:
-1. **Warmstart** — each frame initialises from the previous frame's solution (mandatory for trajectory continuity)
-2. **Velocity clamping** — joint change is scaled to respect the 2.175 rad/s hardware limit
-3. **50 iterations is optimal** — more iterations paradoxically reduce success rate by producing solutions further from the warmstart, causing a velocity-clamping cascade
-
-Current success rate: **91.6%** at the 4 cm threshold. The remaining 8.4% are genuine workspace-boundary positions.
-
-### Step 6 — Simulation and composite
-
-Joint angles and gripper state are replayed in a headless **MuJoCo** simulation. The 4-panel composite video combines:
-- Top-left: original RGB with hand skeleton back-projected from 3D
-- Top-right: metric depth (inferno colormap, 0.2–2.5 m)
-- Bottom-left: top-down table view with trajectory and robot placement
-- Bottom-right: MuJoCo simulation
-
----
-
-## Configuration
-
-All constants live in `src/config.py`. Key values with rationale:
-
-| Constant | Value | Notes |
-|---|---|---|
-| `IK_GAIN` | 0.3 | Lower gain reduces velocity-clamping cascade. Do not increase to 0.5+ |
-| `IK_DAMPING` | 1e-4 | Prevents large updates near singularities |
-| `IK_ITERATIONS` | 50 | Optimal — more iterations hurt by degrading the warmstart for the next frame |
-| `PANDA_REACH_M` | 0.855 | Outer reachability sphere (metres) |
-| `PANDA_DEADZONE_M` | 0.170 | Inner dead zone — too close to reach |
-| `PANDA_MAX_JOINT_VEL` | 2.175 | Hardware joint velocity limit (rad/s) |
-
-Success threshold (4 cm) is at `src/ik/solver.py:135` — not in config.
+Each frame is warmstarted from the previous frame's solution (mandatory for trajectory continuity). Joint velocities are clamped to the 2.175 rad/s hardware limit after each solve. **50 iterations is optimal** — more iterations paradoxically degrade success rate by producing solutions further from the warmstart, creating a velocity-clamping cascade. Achieved: **91.6% success** at 4 cm threshold.
 
 ---
 
@@ -277,69 +230,54 @@ data/<stem>_joints.npz
   joint_angles  (N, 7)   float32   joint angles in radians
   gripper       (N,)     float32   gripper opening in metres [0, 0.08]
   ik_success    (N,)     bool      True if final position error < 4 cm
-  fps           scalar   float     frames per second of original video
-  n_frames      scalar   int       total number of frames
+  fps           scalar   float     source video fps
+  n_frames      scalar   int       total frames
 ```
-
-This is the direct input format for ACT and Diffusion Policy training.
 
 ---
 
-## Recreating the Demo Assets
+## Configuration
 
-After running the full pipeline on `data/take1.mp4`:
+Key values in `src/config.py`:
 
-```bash
-python scripts/export_demo_assets.py
-```
-
-This generates all images and the GIF in `media/`. The GIF requires `imageio`:
-
-```bash
-pip install imageio[ffmpeg]
-```
+| Constant | Value | Notes |
+|---|---|---|
+| `IK_GAIN` | 0.3 | Do not increase — causes velocity-clamping cascade |
+| `IK_DAMPING` | 1e-4 | Prevents blow-up near singularities |
+| `IK_ITERATIONS` | 50 | Optimal for warmstarted trajectory IK |
+| `PANDA_REACH_M` | 0.855 | Outer reachability sphere (metres) |
+| `PANDA_DEADZONE_M` | 0.170 | Inner dead zone |
+| `PANDA_MAX_JOINT_VEL` | 2.175 | Hardware joint velocity limit (rad/s) |
 
 ---
 
 ## Known Limitations
 
-1. **Workspace boundary failures** — 8.4% of frames are unreachable. Carry-forward keeps the trajectory continuous but the robot appears frozen in these segments.
-
-2. **Orientation approximation** — wrist roll is not recovered from MediaPipe. The end-effector orientation is derived from the palm normal and grasp axis only. Tasks requiring wrist rotation (unscrewing, turning) are not well-supported.
-
-3. **No object tracking** — the pipeline captures arm motion only. Object state is not included. Policy training requires an object to be placed in simulation at an approximate known position.
-
-4. **Monocular depth noise** — 30–130 mm temporal std dev. Savitzky-Golay mitigates but does not eliminate it. An RGB-D camera (Intel RealSense D435) would reduce this to 2–5 mm.
-
+1. **Workspace boundary failures** — 8.4% of frames are unreachable. Robot holds last valid configuration.
+2. **Orientation approximation** — wrist roll is not recovered; palm normal + grasp axis only.
+3. **No object tracking** — arm motion only; object state requires separate setup.
+4. **Monocular depth noise** — 30–130 mm std dev. An Intel RealSense D435 would reduce this to 2–5 mm.
 5. **Single hand only** — bimanual tasks are out of scope.
 
 ---
 
 ## Troubleshooting
 
-**`ValueError: Image width N > framebuffer width 640`**
-`robot/panda.xml` must contain `<global offwidth="1920" offheight="1080"/>` inside `<visual>`.
+**`ValueError: Image width N > framebuffer width 640`**  
+`robot/panda.xml` needs `<global offwidth="1920" offheight="1080"/>` inside `<visual>`.
 
-**`ModuleNotFoundError: No module named 'mediapipe'`**
-Only needed for calibration, recording, and extraction. IK and rendering work without it.
+**`ModuleNotFoundError: No module named 'mediapipe'`**  
+Only required for recording/extraction. IK and rendering work without it.
 
-**`ModuleNotFoundError: No module named 'depth_anything_v2'`**
-The `Depth-Anything-V2/` directory is missing. Re-clone it (see Installation).
+**IK success rate is 0%**  
+Check `IK_GAIN` in `src/config.py` — if it is 2.0, the solver diverges. Set it to 0.3.
 
-**IK success rate is 0%**
-`IK_GAIN` in `src/config.py` may be 2.0 (diverges). Set `IK_GAIN = 0.3`.
-
-**Simulation appears frozen for several seconds**
-Expected — this is the carry-forward region where IK failed at workspace boundaries.
-
-**Camera not found during recording**
-Try `python pipeline.py record --camera-index 1`.
+**Simulation frozen for several seconds**  
+Expected — carry-forward at workspace-boundary frames.
 
 ---
 
 ## Roadmap
-
-Next planned improvements (see expert panel discussion in [LESSONS_FOR_CLAUDE.md](LESSONS_FOR_CLAUDE.md)):
 
 - [ ] Output end-effector poses (xyz + quaternion) alongside joint angles
 - [ ] Grasp-close event detection for task segmentation
@@ -353,8 +291,6 @@ Next planned improvements (see expert panel discussion in [LESSONS_FOR_CLAUDE.md
 ---
 
 ## Citation
-
-If you use this project in your research:
 
 ```bibtex
 @misc{h2r2026,

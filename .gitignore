@@ -51,9 +51,12 @@ checkpoints/
 # External repositories / Dependencies
 Depth-Anything-V2/
 
-# Data and Outputs
+# Data and Outputs (raw/intermediate — too large for repo)
 data/
 outputs/
+
+# Demo assets are tracked (committed to media/)
+!media/
 
 # Logs
 *.log
